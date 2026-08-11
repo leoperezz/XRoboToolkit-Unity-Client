@@ -13,6 +13,7 @@ using UnityEngine.UI;
 
 public class UIOperate : MonoBehaviour
 {
+    private const float CaptureControlsHeight = 28f;
     private const int CameraStreamPort = 63902;
     private const int CameraStreamWidth = 1280;
     private const int CameraStreamHeight = 480;
@@ -327,13 +328,23 @@ public class UIOperate : MonoBehaviour
 
     private void CreateCaptureToggles()
     {
-        // Add one compact row to the existing one-column grid. Keeping both
-        // capture controls in this row prevents them from overflowing the panel.
+        // Add one compact row to the existing vertical layout. Keeping both
+        // capture controls in this row prevents them from consuming two rows.
         Transform trackingRows = HandTrackingTog.transform.parent.parent;
         var captureRow = new GameObject("CaptureControls", typeof(RectTransform), typeof(HorizontalLayoutGroup));
         captureRow.layer = HandTrackingTog.gameObject.layer;
         captureRow.transform.SetParent(trackingRows, false);
         captureRow.transform.SetSiblingIndex(HandTrackingTog.transform.parent.GetSiblingIndex() + 1);
+
+        // Toggles uses a VerticalLayoutGroup with childControlHeight disabled,
+        // so its children must provide their own RectTransform height. Also add
+        // a LayoutElement to keep the row correct if that setting changes later.
+        RectTransform captureRect = captureRow.GetComponent<RectTransform>();
+        captureRect.sizeDelta = new Vector2(0f, CaptureControlsHeight);
+        var captureElement = captureRow.AddComponent<LayoutElement>();
+        captureElement.minHeight = CaptureControlsHeight;
+        captureElement.preferredHeight = CaptureControlsHeight;
+        captureElement.flexibleHeight = 0f;
 
         var layout = captureRow.GetComponent<HorizontalLayoutGroup>();
         layout.padding = new RectOffset(10, 4, 0, 0);
@@ -365,9 +376,9 @@ public class UIOperate : MonoBehaviour
         _audioTog.onValueChanged.AddListener(OnAudioTog);
         _audioStreamSender = gameObject.AddComponent<AudioStreamSender>();
 
-        // Thirteen compact 28 px rows fit in the original 372 px panel.
-        GridLayoutGroup grid = trackingRows.GetComponent<GridLayoutGroup>();
-        if (grid != null) grid.cellSize = new Vector2(grid.cellSize.x, 28f);
+        // Apply the new row before the first rendered frame. The parent is a
+        // VerticalLayoutGroup (not a GridLayoutGroup).
+        LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)trackingRows);
     }
 
     private static void SetCaptureControlWidth(GameObject control, float width)
