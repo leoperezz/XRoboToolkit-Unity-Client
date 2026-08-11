@@ -20,11 +20,11 @@ public class ClickLightPositionSolver : MonoBehaviour
     Vector3 clickPosition;
     Vector4 postionToShader = new Vector4();
 
-    Renderer renderer;
+    private Renderer _renderer;
 
     private void Start()
     {
-        renderer = GetComponent<Renderer>();
+        _renderer = GetComponent<Renderer>();
     }
 
     private void OnEnable()
@@ -48,14 +48,14 @@ public class ClickLightPositionSolver : MonoBehaviour
 
         if (pinch.IsPressed())
         {
-            renderer.material.SetFloat("_PressIntensity", 1);
+            _renderer.material.SetFloat("_PressIntensity", 1);
         }
         else
         {
-            renderer.material.SetFloat("_PressIntensity", pinchStrength.ReadValue<float>());
+            _renderer.material.SetFloat("_PressIntensity", pinchStrength.ReadValue<float>());
         }
 
-        renderer.material.SetVector("_ClickPosition", postionToShader);
+        _renderer.material.SetVector("_ClickPosition", postionToShader);
     }
 
     /// <summary>

@@ -128,7 +128,7 @@ Operator headset (H2), source is another Pico / ZED / PC:
 
 H1 (robot-eye Pico) mostly just sits there with VST permission; it is the encoder side.
 
-YAML (`Assets/StreamingAssets/video_source.yml`, also overridable on device under `Android/data/com.xrobotoolkit.client/files/`):
+YAML (`Assets/StreamingAssets/video_source.yml`, also overridable on device under `Android/data/com.xrobotoolkit.handumi/files/`):
 
 - `CamWidth` / `CamHeight` / `CamFPS` / `CamBitrate`
 - `visibleRatio` / `contentRatio` / `heightCompressionFactor` / `RawImageRectSize` — stereo shader

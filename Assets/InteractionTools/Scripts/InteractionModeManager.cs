@@ -23,12 +23,6 @@ public class InteractionModeManager : MonoBehaviour
     /// </summary>
     [SerializeField] private bool _isAllowHeadHandInteraction = true;
 
-    /// <summary>
-    /// Option 2:
-    /// Is near-field interaction allowed.
-    /// </summary>
-    [SerializeField] private bool _isAllowNearFieldInteraction = true;
-
     public bool Dirty = false;
 #if UNITY_EDITOR
     public ActiveInputDevice EditorActiveInputDevice = ActiveInputDevice.ControllerActive;
@@ -183,8 +177,9 @@ public class InteractionModeManager : MonoBehaviour
     {
 #if UNITY_EDITOR
         return true;
-#endif
+#else
         return PXR_Input.IsControllerConnected(controller);
+#endif
     }
 
     private void SetControllerActive(GameObject controller, bool active)

@@ -49,7 +49,7 @@ namespace Robot
 
                 return true;
             }
-            catch (SocketException e)
+            catch (SocketException)
             {
                 return false;
             }
@@ -117,8 +117,9 @@ namespace Robot
         {
 #if UNITY_EDITOR
             return true;
-#endif
+#else
             return PXR_Input.GetControllerDeviceType() == PXR_Input.ControllerDevice.PICO_4U;
+#endif
         }
         
         public static void WriteLog(string tag, string msg)

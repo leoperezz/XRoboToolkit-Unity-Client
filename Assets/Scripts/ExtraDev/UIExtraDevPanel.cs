@@ -36,12 +36,13 @@ public class UIExtraDevPanel : MonoBehaviour
         TmpItem.gameObject.SetActive(false);
 #if UNITY_EDITOR
         Test();
-       return;
-#endif
+        return;
+#else
         ExtDevTrackerConnectState connectState = new ExtDevTrackerConnectState();
         PXR_MotionTracking.GetExtDevTrackerConnectState(ref connectState);
         Debug.Log("connectState.extNumber:" + connectState.extNumber);
         RefreshUI(connectState);
+#endif
     }
 
     [ContextMenu("Test")]

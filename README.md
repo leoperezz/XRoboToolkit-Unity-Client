@@ -304,15 +304,15 @@ A: Ensure the PC and headset are in the same WiFi network. Run the 3D applicatio
 A: Do the following steps:
 ```bash
 # pull the file first
-adb pull /sdcard/Android/data/com.xrobotoolkit.client/files/video_source.yml
+adb pull /sdcard/Android/data/com.xrobotoolkit.handumi/files/video_source.yml
 # edit the video_source.yml
 # push the file back
-adb push video_source.yml /sdcard/Android/data/com.xrobotoolkit.client/files/video_source.yml
+adb push video_source.yml /sdcard/Android/data/com.xrobotoolkit.handumi/files/video_source.yml
 ```
 
 - Q: How to revert the video source to default? [V1.1.0+]
 
-A: Run `adb shell rm /sdcard/Android/data/com.xrobotoolkit.client/files/video_source.yml`.
+A: Run `adb shell rm /sdcard/Android/data/com.xrobotoolkit.handumi/files/video_source.yml`.
 
 - Q: The number of tracker on PC-service is 0, why is that?
 

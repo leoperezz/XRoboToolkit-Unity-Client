@@ -4,7 +4,7 @@ This is a Unity XR client for **PICO 4 / PICO 4 Ultra**, not a regular phone app
 
 Target Unity version: **2022.3.16f1** (see `ProjectSettings/ProjectVersion.txt`). Use this exact version.
 
-Package name: `com.xrobotoolkit.client`
+Package name: `com.xrobotoolkit.handumi`
 
 ---
 
@@ -113,7 +113,7 @@ Use this if you will keep updating the same app on the Pico without uninstalling
 6. Confirm. Publishing Settings should now show the keystore path, alias, and both passwords.
 7. Click **Build** again.
 
-Save those passwords. If you lose them, you cannot update `com.xrobotoolkit.client` without uninstalling the old APK from the headset.
+Save those passwords. If you lose them, you cannot update `com.xrobotoolkit.handumi` without uninstalling the old APK from the headset.
 
 If Unity forgets the passwords between sessions, reopen **Publishing Settings** and type them again before building. You do not need to recreate the keystore.
 
@@ -174,15 +174,15 @@ Then open **XRoboToolkit** from the Pico launcher.
 To push a custom video source file:
 
 ```bash
-adb pull /sdcard/Android/data/com.xrobotoolkit.client/files/video_source.yml
+adb pull /sdcard/Android/data/com.xrobotoolkit.handumi/files/video_source.yml
 # edit the file
-adb push video_source.yml /sdcard/Android/data/com.xrobotoolkit.client/files/video_source.yml
+adb push video_source.yml /sdcard/Android/data/com.xrobotoolkit.handumi/files/video_source.yml
 ```
 
 Revert to default:
 
 ```bash
-adb shell rm /sdcard/Android/data/com.xrobotoolkit.client/files/video_source.yml
+adb shell rm /sdcard/Android/data/com.xrobotoolkit.handumi/files/video_source.yml
 ```
 
 ---

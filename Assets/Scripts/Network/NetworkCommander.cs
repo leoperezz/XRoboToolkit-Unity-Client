@@ -18,8 +18,6 @@ namespace Network
         private NetworkDataProcessor processor;
         private TcpManager tcpManager;
 
-        private string logTag = "NetworkCommander";
-
         public static NetworkCommander Instance { get; private set; }
 
         private void Awake()

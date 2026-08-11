@@ -6,6 +6,27 @@ using UnityEngine.XR;
 
 public class Main : MonoBehaviour
 {
+    public static bool FrontCameraCaptureActive { get; private set; }
+
+    public static void SetFrontCameraCaptureActive(bool active)
+    {
+        FrontCameraCaptureActive = active;
+        if (Application.platform != RuntimePlatform.Android) return;
+
+        if (active)
+        {
+            PXR_Enterprise.CloseVSTCamera();
+            PXR_Manager.EnableVideoSeeThrough = false;
+            Debug.Log("VST camera released for front-camera capture");
+        }
+        else
+        {
+            PXR_Manager.EnableVideoSeeThrough = true;
+            bool opened = PXR_Enterprise.OpenVSTCamera();
+            Debug.Log("VST camera restored: " + opened);
+        }
+    }
+
     private void Awake()
     {
         DebugManager.instance.enableRuntimeUI = false;
@@ -30,7 +51,7 @@ public class Main : MonoBehaviour
         if (Application.platform == RuntimePlatform.Android)
         {
             Debug.Log("OnEnable");
-            PXR_Enterprise.OpenVSTCamera();
+            if (!FrontCameraCaptureActive) PXR_Enterprise.OpenVSTCamera();
         }
     }
 
@@ -54,13 +75,15 @@ public class Main : MonoBehaviour
         }
         else
         {
-            PXR_Manager.EnableVideoSeeThrough = true;
             //Closing the security fence is only effective on B-end devices.
             PXR_Enterprise.SwitchSystemFunction(SystemFunctionSwitchEnum.SFS_SECURITY_ZONE_PERMANENTLY,
                 SwitchEnum.S_OFF);
-            bool openVstRes = PXR_Enterprise.OpenVSTCamera();
-
-            Debug.Log("openVstRes:" + openVstRes);
+            if (!FrontCameraCaptureActive)
+            {
+                PXR_Manager.EnableVideoSeeThrough = true;
+                bool openVstRes = PXR_Enterprise.OpenVSTCamera();
+                Debug.Log("openVstRes:" + openVstRes);
+            }
         }
     }
 }
