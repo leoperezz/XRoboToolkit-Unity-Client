@@ -163,7 +163,8 @@ namespace Robot
 
         public static int StartSendImage(string ip, int port)
         {
-            return GetJavaObject().Call<int>("StartSendImage", ip, port);
+            // Use the public wrapper, which verifies that preview is active.
+            return GetJavaObject().Call<int>("startSendingImages", ip, port);
         }
 
         public static int StopPreview()
