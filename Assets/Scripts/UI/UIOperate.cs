@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using Robot;
@@ -13,12 +12,7 @@ using UnityEngine.UI;
 
 public class UIOperate : MonoBehaviour
 {
-    private const float CaptureControlsHeight = 28f;
-    private const int CameraStreamPort = 63902;
-    private const int CameraStreamWidth = 1280;
-    private const int CameraStreamHeight = 480;
-    private const int CameraStreamFps = 30;
-    private const int CameraStreamBitrate = 5 * 1024 * 1024;
+    private const float AudioControlHeight = 28f;
 
     public Text SN;
     public Text LocalIP;
@@ -47,12 +41,7 @@ public class UIOperate : MonoBehaviour
     public VideoSourceConfigManager sourceConfig => videoSource.videoSourceConfigManager;
 
     public Dropdown videoSourceDropdown;
-    private Toggle _cameraTog;
     private Toggle _audioTog;
-    private bool _cameraStreamRequested;
-    private Coroutine _cameraStartCoroutine;
-    private Coroutine _cameraOpenTimeoutCoroutine;
-    private bool _cameraPreviewReady;
     private AudioStreamSender _audioStreamSender;
 
     // Start is called before the first frame update
@@ -70,8 +59,7 @@ public class UIOperate : MonoBehaviour
         HeadTog.onValueChanged.AddListener(OnHeadTog);
         ControllerTog.onValueChanged.AddListener(OnControllerTog);
         HandTrackingTog.onValueChanged.AddListener(OnHandTrackingTog);
-        CreateCaptureToggles();
-        CameraHandle.CameraError += OnCameraError;
+        CreateAudioToggle();
 
         SendTog.onValueChanged.AddListener(OnSendTog);
         Version.text = "v: " + Application.version;
@@ -326,48 +314,13 @@ public class UIOperate : MonoBehaviour
         TrackingData.SetHandTrackingOn(on);
     }
 
-    private void CreateCaptureToggles()
+    private void CreateAudioToggle()
     {
-        // Add one compact row to the existing vertical layout. Keeping both
-        // capture controls in this row prevents them from consuming two rows.
+        // Add one compact microphone row so the controls below remain visible.
         Transform trackingRows = HandTrackingTog.transform.parent.parent;
-        var captureRow = new GameObject("CaptureControls", typeof(RectTransform), typeof(HorizontalLayoutGroup));
-        captureRow.layer = HandTrackingTog.gameObject.layer;
-        captureRow.transform.SetParent(trackingRows, false);
-        captureRow.transform.SetSiblingIndex(HandTrackingTog.transform.parent.GetSiblingIndex() + 1);
-
-        // Toggles uses a VerticalLayoutGroup with childControlHeight disabled,
-        // so its children must provide their own RectTransform height. Also add
-        // a LayoutElement to keep the row correct if that setting changes later.
-        RectTransform captureRect = captureRow.GetComponent<RectTransform>();
-        captureRect.sizeDelta = new Vector2(0f, CaptureControlsHeight);
-        var captureElement = captureRow.AddComponent<LayoutElement>();
-        captureElement.minHeight = CaptureControlsHeight;
-        captureElement.preferredHeight = CaptureControlsHeight;
-        captureElement.flexibleHeight = 0f;
-
-        var layout = captureRow.GetComponent<HorizontalLayoutGroup>();
-        layout.padding = new RectOffset(10, 4, 0, 0);
-        layout.spacing = 4f;
-        layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.childControlWidth = false;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = false;
-        layout.childForceExpandHeight = true;
-
-        GameObject cameraControl = Instantiate(HandTrackingTog.gameObject, captureRow.transform);
-        cameraControl.name = "CameraStream";
-        SetCaptureControlWidth(cameraControl, 132f);
-        _cameraTog = cameraControl.GetComponent<Toggle>();
-        _cameraTog.SetIsOnWithoutNotify(false);
-        Text cameraLabel = cameraControl.GetComponentInChildren<Text>(true);
-        if (cameraLabel != null) cameraLabel.text = "Front Camera";
-        _cameraTog.onValueChanged.RemoveAllListeners();
-        _cameraTog.onValueChanged.AddListener(OnCameraTog);
-
-        GameObject audioControl = Instantiate(HandTrackingTog.gameObject, captureRow.transform);
+        GameObject audioControl = Instantiate(HandTrackingTog.gameObject, trackingRows);
         audioControl.name = "AudioStream";
-        SetCaptureControlWidth(audioControl, 120f);
+        audioControl.transform.SetSiblingIndex(HandTrackingTog.transform.parent.GetSiblingIndex() + 1);
         _audioTog = audioControl.GetComponent<Toggle>();
         _audioTog.SetIsOnWithoutNotify(false);
         Text audioLabel = audioControl.GetComponentInChildren<Text>(true);
@@ -376,152 +329,15 @@ public class UIOperate : MonoBehaviour
         _audioTog.onValueChanged.AddListener(OnAudioTog);
         _audioStreamSender = gameObject.AddComponent<AudioStreamSender>();
 
-        // Apply the new row before the first rendered frame. The parent is a
-        // VerticalLayoutGroup (not a GridLayoutGroup).
+        RectTransform audioRect = audioControl.GetComponent<RectTransform>();
+        if (audioRect != null) audioRect.sizeDelta = new Vector2(audioRect.sizeDelta.x, AudioControlHeight);
+        LayoutElement audioElement = audioControl.GetComponent<LayoutElement>();
+        if (audioElement == null) audioElement = audioControl.AddComponent<LayoutElement>();
+        audioElement.minHeight = AudioControlHeight;
+        audioElement.preferredHeight = AudioControlHeight;
+        audioElement.flexibleHeight = 0f;
+
         LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)trackingRows);
-    }
-
-    private static void SetCaptureControlWidth(GameObject control, float width)
-    {
-        RectTransform rect = control.GetComponent<RectTransform>();
-        if (rect != null) rect.sizeDelta = new Vector2(width, rect.sizeDelta.y);
-        LayoutElement element = control.GetComponent<LayoutElement>();
-        if (element == null) element = control.AddComponent<LayoutElement>();
-        element.preferredWidth = width;
-        element.flexibleWidth = 0f;
-    }
-
-    private void OnCameraTog(bool on)
-    {
-        _cameraStreamRequested = on;
-        if (!on)
-        {
-            if (_cameraStartCoroutine != null)
-            {
-                StopCoroutine(_cameraStartCoroutine);
-                _cameraStartCoroutine = null;
-            }
-            StopCameraOpenTimeout();
-            _cameraPreviewReady = false;
-            CameraHandle.StopPreview();
-            CameraHandle.CloseCamera();
-            Main.SetFrontCameraCaptureActive(false);
-            Toast.Show("Camera stream stopped");
-            return;
-        }
-
-        if (!Utils.IsPico4U())
-        {
-            Toast.Show("Front camera streaming requires a PICO 4 Ultra Enterprise device.");
-            _cameraTog.SetIsOnWithoutNotify(false);
-            _cameraStreamRequested = false;
-            return;
-        }
-        if (string.IsNullOrEmpty(Robot.TcpHandler.GetTargetIP))
-        {
-            Toast.Show("Connect to PC Service before enabling Camera.");
-            _cameraTog.SetIsOnWithoutNotify(false);
-            _cameraStreamRequested = false;
-            return;
-        }
-
-        if (Permission.HasUserAuthorizedPermission(Permission.Camera))
-        {
-            StartCameraStreaming();
-            return;
-        }
-
-        var callbacks = new PermissionCallbacks();
-        callbacks.PermissionGranted += _ =>
-        {
-            if (_cameraStreamRequested && _cameraTog.isOn) StartCameraStreaming();
-        };
-        callbacks.PermissionDenied += _ => DisableCameraToggle("Camera permission denied.");
-        callbacks.PermissionDeniedAndDontAskAgain += _ =>
-            DisableCameraToggle("Enable camera permission in PICO system settings.");
-        Permission.RequestUserPermission(Permission.Camera, callbacks);
-    }
-
-    private void StartCameraStreaming()
-    {
-        if (!_cameraStreamRequested || !_cameraTog.isOn) return;
-        if (_cameraStartCoroutine == null)
-            _cameraStartCoroutine = StartCoroutine(StartCameraStreamingAfterVstRelease());
-    }
-
-    private IEnumerator StartCameraStreamingAfterVstRelease()
-    {
-        Main.SetFrontCameraCaptureActive(true);
-        // VST releases the RGB camera asynchronously on the headset.
-        yield return new WaitForSecondsRealtime(0.35f);
-        _cameraStartCoroutine = null;
-        if (!_cameraStreamRequested || !_cameraTog.isOn)
-        {
-            Main.SetFrontCameraCaptureActive(false);
-            yield break;
-        }
-
-        Toast.Show("Starting front camera stream");
-        _cameraPreviewReady = false;
-        int result = CameraHandle.StartCameraPreview(
-            CameraStreamWidth, CameraStreamHeight, CameraStreamFps, CameraStreamBitrate, 0,
-            (int)PXRCaptureRenderMode.PXRCapture_RenderMode_3D,
-            () =>
-            {
-                // Opening is asynchronous; honor a toggle-off that happened meanwhile.
-                if (!_cameraStreamRequested) return;
-                _cameraPreviewReady = true;
-                StopCameraOpenTimeout();
-                int sendResult = CameraHandle.StartSendImage(Robot.TcpHandler.GetTargetIP, CameraStreamPort);
-                if (sendResult != 0)
-                {
-                    DisableCameraToggle("Unable to connect camera stream to PC Service (" + sendResult + ").");
-                }
-            });
-        // CameraHandle.aar returns setCallback() here instead of the result of
-        // openCameraAsync(). On current PICO 4 Ultra firmware, 1 means that the
-        // callback was registered; actual success arrives through the state callback.
-        if (result != 0 && result != 1)
-        {
-            DisableCameraToggle("Unable to open the front camera (" + result + ").");
-            yield break;
-        }
-        Debug.Log("Front camera asynchronous open requested; callback result: " + result);
-        if (!_cameraPreviewReady)
-            _cameraOpenTimeoutCoroutine = StartCoroutine(CameraOpenTimeout());
-    }
-
-    private IEnumerator CameraOpenTimeout()
-    {
-        yield return new WaitForSecondsRealtime(5f);
-        _cameraOpenTimeoutCoroutine = null;
-        if (_cameraStreamRequested && !_cameraPreviewReady)
-            DisableCameraToggle("Front camera did not reach preview state (timeout).");
-    }
-
-    private void StopCameraOpenTimeout()
-    {
-        if (_cameraOpenTimeoutCoroutine == null) return;
-        StopCoroutine(_cameraOpenTimeoutCoroutine);
-        _cameraOpenTimeoutCoroutine = null;
-    }
-
-    private void DisableCameraToggle(string message)
-    {
-        Toast.Show(message);
-        _cameraStreamRequested = false;
-        _cameraPreviewReady = false;
-        StopCameraOpenTimeout();
-        _cameraTog.SetIsOnWithoutNotify(false);
-        CameraHandle.StopPreview();
-        CameraHandle.CloseCamera();
-        Main.SetFrontCameraCaptureActive(false);
-    }
-
-    private void OnCameraError(int errorCode)
-    {
-        if (_cameraStreamRequested)
-            DisableCameraToggle("Front camera error (" + errorCode + ").");
     }
 
     private void OnAudioTog(bool on)
@@ -659,14 +475,6 @@ public class UIOperate : MonoBehaviour
 
     private void OnDestroy()
     {
-        CameraHandle.CameraError -= OnCameraError;
-        if (_cameraStreamRequested)
-        {
-            _cameraStreamRequested = false;
-            CameraHandle.StopPreview();
-            CameraHandle.CloseCamera();
-            Main.SetFrontCameraCaptureActive(false);
-        }
         if (_audioStreamSender != null) _audioStreamSender.StopStreaming();
     }
 }

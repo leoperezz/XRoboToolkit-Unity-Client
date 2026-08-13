@@ -17,8 +17,6 @@ namespace Robot
 
     public class CameraHandle : AndroidJavaProxy
     {
-        public static event Action<int> CameraError;
-
         private static int _width = 1280;
         private static int _height = 480;
         private static int _fps = 30;
@@ -68,12 +66,7 @@ namespace Robot
                 case PXRCaptureState.CAPTURE_STATE_CONFIGURED:
 
                     Debug.Log($"[PXRCapture]  OnConfigured ");
-                    int previewResult = GetJavaObject().Call<int>("StartPreview", _width, _height, _captureRenderMode);
-                    if (previewResult != 0)
-                    {
-                        Debug.LogError($"[PXRCapture] StartPreview failed: {previewResult}");
-                        CameraError?.Invoke(previewResult);
-                    }
+                    GetJavaObject().Call<int>("StartPreview", _width, _height, _captureRenderMode);
 
                     break;
                 case PXRCaptureState.CAPTURE_STATE_VIDEO_PREVIEWING:
@@ -96,7 +89,6 @@ namespace Robot
         public void captureOnError(int errorCode)
         {
             Debug.LogError($"[PXRCapture] Error: {errorCode}");
-            UnityMainThreadDispatcher.Instance().Enqueue(() => CameraError?.Invoke(errorCode));
         }
 
         public void captureOnEnviromentInfoChanged(int info1, int info2)
@@ -171,8 +163,7 @@ namespace Robot
 
         public static int StartSendImage(string ip, int port)
         {
-            // Use the public wrapper, which verifies that preview is active.
-            return GetJavaObject().Call<int>("startSendingImages", ip, port);
+            return GetJavaObject().Call<int>("StartSendImage", ip, port);
         }
 
         public static int StopPreview()
